@@ -191,6 +191,12 @@ hr.horizontal1.dark {
     word-wrap: break-word; /* Allow long words to be broken and wrap onto the next line */
 }
 
+.button.disabled {
+    cursor: not-allowed;
+    /* Add any additional styling to indicate disabled state */
+    opacity: 0.7; /* Example: reduce opacity */
+}
+
 
     </style>
 
@@ -292,11 +298,11 @@ hr.horizontal1.dark {
             </div>
 
             <div class="file-input-container ms-4 mt-3">
-    <label for="fileInput" multiple>Choose Excel Files:</label>
-    <input type="file" id="fileInput" multiple>
+    <label for="fileInput" multiple style="display: none;">Choose Excel Files:</label>
+    <input type="file" id="fileInput" multiple style="display: none;">
     <!-- Button with progress bar -->
     <div class="button-container">
-        <div class="button" onclick="getData()">
+        <div class="button" onclick="openFileDialog()">
             <div class="text-icon">
                 <i class="bx bx-cloud-upload"></i>
                 <span class="text">Upload File</span>
@@ -305,7 +311,8 @@ hr.horizontal1.dark {
     </div>
 </div>
 
-<div class="row ms-2">
+
+<div class="row ms-2 me-2">
     <div class="col-6">
         <div class="card my-4">
             <div id="result"></div>
@@ -437,80 +444,138 @@ hr.horizontal1.dark {
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
   <script>
+
+var isUploadInProgress = false;
+
+function openFileDialog() {
+    // Only open file dialog if upload process is not in progress
+    if (!isUploadInProgress) {
+        document.getElementById('fileInput').click();
+    }
+}
+
+document.getElementById('fileInput').addEventListener('change', function() {
+    // Call getData() function when a file is selected
+    getData();
+});
+
+
     var overallTotalsTable10 = { totalL: 0, totalO: 0, totalR: 0 };
     var overallTotalsTable11 = { totalL: 0, totalO: 0, totalR: 0 };
 
     const button = document.querySelector(".button");
+    let isRequestInProgress = false;
 
-    function simulateButtonClick() {
-        button.classList.remove("progress");
-        button.querySelector(".text").innerText = "Uploaded";
-    }
+    // function simulateButtonClick() {
+    //     button.classList.remove("progress");
+    //     button.querySelector(".text").innerText = "Uploaded";
+    // }
 
     function getData() {
-        var fileInput = document.getElementById('fileInput');
-        var files = fileInput.files;
 
-        var formData = new FormData();
-        for (var i = 0; i < files.length; i++) {
-            formData.append('files[]', files[i]);
-        }
+       // Set the upload process status to true
+    isUploadInProgress = true;
 
-        button.classList.add("progress");
-        button.querySelector(".text").innerText = "Uploading...";
+// Disable the file input to prevent selecting files during the upload process
+document.getElementById('fileInput').disabled = true;
 
-        $.ajax({
-            type: 'POST',
-            url: 'elem_read_excel.php',
-            data: formData,
-            contentType: false,
-            processData: false,
-            dataType: 'json',
-            success: function(data) {
-                var responses = data.tableData;
 
-                responses.forEach(function(response) {
-                    if (Array.isArray(response.data)) {
-                        if (response.sheetName === "Table10") {
-                            displayData(response.data, response.totals, response.filename, response.f39Value);
-                            updateOverallTotals(response.totals, overallTotalsTable10);
-                        } else if (response.sheetName === "Table11 ") {
-                            displayData2(response.data, response.totals, response.filename, response.f39Value);
-                            updateOverallTotals(response.totals, overallTotalsTable11);
-                        }
-                    } else {
-                        console.error('Invalid data format:', response.data);
-                    }
-                });
+      // If a request is already in progress, return early to prevent multiple clicks
+    if (isRequestInProgress) return;
 
-                displayOverallTotals(overallTotalsTable10, overallTotalsTable11);
-            },
-            error: function(xhr, status, error) {
-                console.error('Error:', error);
-                console.error('Status:', status);
-                console.error('Response Text:', xhr.responseText);
-                // Optionally, you can display an error message to the user
-                // $('#error-message').text('An error occurred: ' + error);
-            },
-            complete: function() {
-                setTimeout(() => {
-                    button.classList.remove("progress");
-                    button.querySelector(".text").innerText = "Upload File";
-                    simulateButtonClick();
-                }, 6000); // Delay to simulate file processing
-            },
-            xhr: function() {
-                var xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        var percent = (e.loaded / e.total) * 100;
-                        // console.log(percent);
-                    }
-                });
-                return xhr;
-            }
-        });
+      // Set the flag to indicate that a request is now in progress
+      isRequestInProgress = true;
+
+
+    // Disable the upload button
+    button.disabled = true;
+    button.classList.add("disabled");
+
+    var fileInput = document.getElementById('fileInput');
+    var files = fileInput.files;
+
+    var formData = new FormData();
+    for (var i = 0; i < files.length; i++) {
+        formData.append('files[]', files[i]);
     }
+
+    button.classList.add("progress");
+    button.querySelector(".text").innerText = "Uploading...";
+
+    $.ajax({
+        type: 'POST',
+        url: 'elem_read_excel.php',
+        data: formData,
+        contentType: false,
+        processData: false,
+        dataType: 'json',
+        success: function(data) {
+            var responses = data.tableData;
+
+            responses.forEach(function(response) {
+                if (Array.isArray(response.data)) {
+                    if (response.sheetName === "Table10") {
+                        displayData(response.data, response.totals, response.filename, response.f39Value);
+                        updateOverallTotals(response.totals, overallTotalsTable10);
+                    } else if (response.sheetName === "Table11 ") {
+                        displayData2(response.data, response.totals, response.filename, response.f39Value);
+                        updateOverallTotals(response.totals, overallTotalsTable11);
+                    }
+                } else {
+                    console.error('Invalid data format:', response.data);
+                }
+            });
+
+            displayOverallTotals(overallTotalsTable10, overallTotalsTable11);
+        },
+        error: function(xhr, status, error) {
+            console.error('Error:', error);
+            console.error('Status:', status);
+            console.error('Response Text:', xhr.responseText);
+            // Optionally, you can display an error message to the user
+            // $('#error-message').text('An error occurred: ' + error);
+        },
+        complete: function() {
+           
+           
+
+            setTimeout(() => {
+                // Change button text to "Uploaded" after 3 seconds
+                button.classList.remove("progress");
+                button.querySelector(".text").innerText = "Uploaded";
+
+                setTimeout(() => {
+                    // Change button text to "Upload File" after another 3 seconds
+                    button.querySelector(".text").innerText = "Upload File";
+                    // simulateButtonClick();
+                     // Re-enable the upload button
+            button.disabled = false;
+            button.classList.remove("disabled");
+              // Reset the flag to indicate that the request is complete
+              isUploadInProgress = false;
+          
+          // Re-enable the file input after the upload process completes
+       document.getElementById('fileInput').disabled = false;
+          
+
+                    // Clear the file input
+                    fileInput.value = "";
+                }, 3000);
+            }, 3000); // Delay to simulate file processing
+        },
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    var percent = (e.loaded / e.total) * 100;
+                    // console.log(percent);
+                }
+            });
+            return xhr;
+        }
+    });
+}
+
 
     function displayData(data, totals, filename, f39Value) {
         var resultDiv = $('#result');
@@ -521,10 +586,10 @@ hr.horizontal1.dark {
         html += '<table class="table table-striped">';
         html += '<thead class="thead-dark">';
         html += '<tr>';
-        html += '<th scope="col" style="max-width: 150px; text-align: center;">B</th>';
-        html += '<th scope="col" style="text-align: center;">L</th>';
-        html += '<th scope="col" style="text-align: center;">O</th>';
-        html += '<th scope="col" style="text-align: center;">R</th>';
+        html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
+        html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
+        html += '<th scope="col" style="text-align: center;">Male</th>';
+        html += '<th scope="col" style="text-align: center;">Female</th>';
         html += '<th scope="col" style="text-align: center;">Total</th>';
         html += '</tr>';
         html += '</thead>';
@@ -549,6 +614,7 @@ hr.horizontal1.dark {
             // Splitting the content of the first column and adding line breaks
             var bValues = bValue.split('\n');
             var formattedBValue = bValues.join('<br>');
+            
 
             html += '<tr>';
             html += '<td>' + formattedBValue + '</td>';
@@ -563,8 +629,8 @@ hr.horizontal1.dark {
         html += '</table>';
         html += '</div>';
 
-        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total L: ' + totalL + ', Total O: ' + totalO + ', Total R: ' + totalR + '</p>';
-        html += '<p style="font-size: 14px; color: black; font-weight: 700">F37 Value: ' + f39Value + '</p>';
+        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p>';
+        // html += '<p style="font-size: 14px; color: black; font-weight: 700">F37 Value: ' + f39Value + '</p>';
 
         tableContainer.html(html);
         resultDiv.append(tableContainer);
@@ -579,10 +645,10 @@ hr.horizontal1.dark {
         html += '<table class="table table-striped">';
         html += '<thead class="thead-dark">';
         html += '<tr>';
-        html += '<th scope="col" style="max-width: 150px; text-align: center;">B</th>';
-        html += '<th scope="col" style="text-align: center;">L</th>';
-        html += '<th scope="col" style="text-align: center;">O</th>';
-        html += '<th scope="col" style="text-align: center;">R</th>';
+        html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
+        html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
+        html += '<th scope="col" style="text-align: center;">Male</th>';
+        html += '<th scope="col" style="text-align: center;">Female</th>';
         html += '<th scope="col" style="text-align: center;">Total</th>';
         html += '</tr>';
         html += '</thead>';
@@ -621,8 +687,8 @@ hr.horizontal1.dark {
         html += '</table>';
         html += '</div>';
 
-        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total L: ' + totalL + ', Total O: ' + totalO + ', Total R: ' + totalR + '</p>';
-        html += '<p style="font-size: 14px; color: black; font-weight: 700">F37 Value: ' + f39Value + '</p>';
+        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p>';
+        // html += '<p style="font-size: 14px; color: black; font-weight: 700">F37 Value: ' + f39Value + '</p>';
 
         tableContainer.html(html);
         resultDiv.append(tableContainer);
@@ -637,12 +703,12 @@ hr.horizontal1.dark {
     function displayOverallTotals(overallTotalsTable10, overallTotalsTable11) {
         var overallTotalsDiv = $('#overallTotals');
         var html = '<h6>Overall Totals for Table10</h6>';
-        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total L: ' + overallTotalsTable10.totalL + ', Total O: ' + overallTotalsTable10.totalO + ', Total R: ' + overallTotalsTable10.totalR + '</p>';
+        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + overallTotalsTable10.totalL + ', Total Male: ' + overallTotalsTable10.totalO + ', Total Female: ' + overallTotalsTable10.totalR + '</p>';
         overallTotalsDiv.html(html);
 
         var overallTotalsDiv2 = $('#overallTotals2');
         var html2 = '<h6>Overall Totals for Table11</h6>';
-        html2 += '<p style="font-size: 14px; color: black; font-weight: 700">Total L: ' + overallTotalsTable11.totalL + ', Total O: ' + overallTotalsTable11.totalO + ', Total R: ' + overallTotalsTable11.totalR + '</p>';
+        html2 += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + overallTotalsTable11.totalL + ', Total Male: ' + overallTotalsTable11.totalO + ', Total Female: ' + overallTotalsTable11.totalR + '</p>';
         overallTotalsDiv2.html(html2);
     }
 </script>
