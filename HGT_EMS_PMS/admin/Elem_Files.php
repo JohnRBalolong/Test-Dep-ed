@@ -232,9 +232,26 @@ hr.horizontal1.dark {
         <li class="nav-item">
           <a class="nav-link text-white active bg-gradient-success" href="../admin/Elem_Files.php">
             <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
-              <i class="material-icons opacity-10">request_quote</i>
+              <i class="material-icons opacity-10">folder</i>
             </div>
             <span class="nav-link-text ms-1">Elementary_Files</span>
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link text-white" href="../admin/Jrh_Files.php">
+            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="material-icons opacity-10">list</i>
+            </div>
+            <span class="nav-link-text ms-1">Junior High_Files</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white" href="../admin/Shs_Files.php">
+            <div class="text-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="material-icons opacity-10">badge</i>
+            </div>
+            <span class="nav-link-text ms-1">Senior High_Files</span>
           </a>
         </li>
 
@@ -293,7 +310,7 @@ hr.horizontal1.dark {
           <div class="card my-4">
             <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
               <div class="bg-gradient-success shadow-primary border-radius-lg pt-4 pb-3">
-                <h6 class="text-white text-capitalize ps-3">Upload Elementary Files to get Table10</h6>
+                <h6 class="text-white text-capitalize ps-3">Upload Elementary Files to get table data</h6>
               </div>
             </div>
 
@@ -440,7 +457,7 @@ hr.horizontal1.dark {
 
 
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="..." crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"  crossorigin="anonymous"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
   <script>
