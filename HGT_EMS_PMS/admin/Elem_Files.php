@@ -467,21 +467,17 @@ hr.horizontal1.dark {
 
 
   <script>
+    var isUploadInProgress = false;
 
-var isUploadInProgress = false;
-
-function openFileDialog() {
-    // Only open file dialog if upload process is not in progress
-    if (!isUploadInProgress) {
-        document.getElementById('fileInput').click();
+    function openFileDialog() {
+        if (!isUploadInProgress) {
+            document.getElementById('fileInput').click();
+        }
     }
-}
 
-document.getElementById('fileInput').addEventListener('change', function() {
-    // Call getData() function when a file is selected
-    getData();
-});
-
+    document.getElementById('fileInput').addEventListener('change', function() {
+        getData();
+    });
 
     var overallTotalsTable10 = { totalL: 0, totalO: 0, totalR: 0 };
     var overallTotalsTable11 = { totalL: 0, totalO: 0, totalR: 0 };
@@ -489,263 +485,222 @@ document.getElementById('fileInput').addEventListener('change', function() {
     const button = document.querySelector(".button");
     let isRequestInProgress = false;
 
-    // function simulateButtonClick() {
-    //     button.classList.remove("progress");
-    //     button.querySelector(".text").innerText = "Uploaded";
-    // }
-
     function getData() {
-    // Set the upload process status to true
-    isUploadInProgress = true;
+        isUploadInProgress = true;
+        document.getElementById('fileInput').disabled = true;
+        if (isRequestInProgress) return;
+        isRequestInProgress = true;
+        button.disabled = true;
+        button.classList.add("disabled");
 
-    // Disable the file input to prevent selecting files during the upload process
-    document.getElementById('fileInput').disabled = true;
+        var fileInput = document.getElementById('fileInput');
+        var files = fileInput.files;
 
-    // If a request is already in progress, return early to prevent multiple clicks
-    if (isRequestInProgress) return;
-
-    // Set the flag to indicate that a request is now in progress
-    isRequestInProgress = true;
-
-    // Disable the upload button
-    button.disabled = true;
-    button.classList.add("disabled");
-
-    var fileInput = document.getElementById('fileInput');
-    var files = fileInput.files;
-
-    var formData = new FormData();
-    for (var i = 0; i < files.length; i++) {
-        formData.append('files[]', files[i]);
-    }
-
-    button.classList.add("progress");
-    button.querySelector(".text").innerText = "Uploading...";
-
-    $.ajax({
-        type: 'POST',
-        url: 'elem_read_excel.php',
-        data: formData,
-        contentType: false,
-        processData: false,
-        dataType: 'json',
-        success: function(data) {
-    var responses = data.tableData;
-    
-    var schInfoData = {}; // Object to store SchInfo data
-    
-    responses.forEach(function(response) {
-    if (Array.isArray(response.data)) {
-        if (response.sheetName === "SchInfo ") {
-            // Extract SchInfo data
-            schInfoData = {
-                F39: response.data[0]['F39'],
-                F41: response.data[1]['F41'],
-                AH23: response.data[2]['AH23']
-            };
-            
-            displaySchInfo(schInfoData);
-
-            
+        var formData = new FormData();
+        for (var i = 0; i < files.length; i++) {
+            formData.append('files[]', files[i]);
         }
+
+        button.classList.add("progress");
+        button.querySelector(".text").innerText = "Uploading...";
+
+        $.ajax({
+            type: 'POST',
+            url: 'elem_read_excel.php',
+            data: formData,
+            contentType: false,
+            processData: false,
+            dataType: 'json',
+            success: function(data) {
+                var schInfoData = {}; 
+
+                data.tableData.forEach(function(response) {
+                    if (Array.isArray(response.data)) {
+                        if (response.sheetName === "SchInfo ") {
+                            schInfoData = {
+                                F39: response.data[0]['F39'],
+                                F41: response.data[1]['F41'],
+                                AH23: response.data[2]['AH23']
+                            };
+                        }
+
+                        if (response.sheetName === "Table10") {
+                            var tableDiv = displayDataTable(response.data, response.filename, schInfoData, overallTotalsTable10);
+                            $('#result').append(tableDiv);
+                        }
+
+                        if (response.sheetName === "Table11 ") {
+                            var tableDiv = displayData2(response.data, response.filename, schInfoData, overallTotalsTable11);
+                            $('#result2').append(tableDiv);
+                        }
+                    } else {
+                        console.error('Invalid data format:', response.data);
+                    }
+                });
+
+                displayOverallTotals(overallTotalsTable10, overallTotalsTable11);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error:', error);
+                console.error('Status:', status);
+                console.error('Response Text:', xhr.responseText);
+            },
+            complete: function() {
+    setTimeout(() => {
+        button.classList.remove("progress");
+        button.querySelector(".text").innerText = "Re-Upload File"; // Change text to "Re-Upload File"
+        button.disabled = false;
+        button.classList.remove("disabled");
+        isUploadInProgress = false;
+        document.getElementById('fileInput').disabled = false;
+        fileInput.value = "";
         
-        if (response.sheetName === "Table10") {
-            displayData(response.data, response.totals, response.filename, schInfoData);
-            updateOverallTotals(response.totals, overallTotalsTable10);
-        }
-
-        if (response.sheetName === "Table11 ") {
-            displayData2(response.data, response.totals, response.filename, schInfoData);
-            updateOverallTotals(response.totals, overallTotalsTable11);
-        }
-    } else {
-        console.error('Invalid data format:', response.data);
-    }
-});
-
-    displayOverallTotals(overallTotalsTable10, overallTotalsTable11);
+        // Reload the page when the button is clicked
+        button.addEventListener("click", function reloadPage() {
+            window.location.reload();
+            button.removeEventListener("click", reloadPage); // Remove the event listener after reloading
+        });
+    }, 3000);
 },
 
+            xhr: function() {
+                var xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        var percent = (e.loaded / e.total) * 100;
+                    }
+                });
+                return xhr;
+            }
+        });
+    }
 
-        error: function(xhr, status, error) {
-            console.error('Error:', error);
-            console.error('Status:', status);
-            console.error('Response Text:', xhr.responseText);
-        },
-        complete: function() {
-            setTimeout(() => {
-                // Change button text to "Uploaded" after 3 seconds
-                button.classList.remove("progress");
-                button.querySelector(".text").innerText = "Uploaded";
-
-                setTimeout(() => {
-                    // Change button text to "Upload File" after another 3 seconds
-                    button.querySelector(".text").innerText = "Upload File";
-                    // Re-enable the upload button
-                    button.disabled = false;
-                    button.classList.remove("disabled");
-                    // Reset the flag to indicate that the request is complete
-                    isUploadInProgress = false;
-                    // Re-enable the file input after the upload process completes
-                    document.getElementById('fileInput').disabled = false;
-                    // Clear the file input
-                    fileInput.value = "";
-                }, 3000);
-            }, 3000); // Delay to simulate file processing
-        },
-        xhr: function() {
-            var xhr = new window.XMLHttpRequest();
-            xhr.upload.addEventListener('progress', function(e) {
-                if (e.lengthComputable) {
-                    var percent = (e.loaded / e.total) * 100;
-                }
-            });
-            return xhr;
-        }
-    });
-}
-
-
-
-
-function displayData(data, totals, filename, schInfoData) {
-    var resultDiv = $('#result');
-
-    var tableContainer = $('<div class="table-container"></div>');
-    var html = '<h6>Table for ' + filename + '</h6>';
-
-    // Display table
-    html += '<div class="table-responsive">';
-    html += '<table class="table table-striped">';
-    html += '<thead class="thead-dark">';
-    html += '<tr>';
-    html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
-    html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
-    html += '<th scope="col" style="text-align: center;">Male</th>';
-    html += '<th scope="col" style="text-align: center;">Female</th>';
-    html += '<th scope="col" style="text-align: center;">Total</th>';
-    html += '</tr>';
-    html += '</thead>';
-    html += '<tbody>';
-
-    var totalL = 0;
-    var totalO = 0;
-    var totalR = 0;
-
-    data.forEach(function(row) {
-        var bValue = row[0];
-        var lValue = row[1];
-        var oValue = row[2];
-        var rValue = row[3];
-
-        var totalValue = parseFloat(oValue) + parseFloat(rValue);
-
-        totalL += parseFloat(lValue);
-        totalO += parseFloat(oValue);
-        totalR += parseFloat(rValue);
-
-        // Splitting the content of the first column and adding line breaks
-        var bValues = bValue.split('\n');
-        var formattedBValue = bValues.join('<br>');
-
+    function displayDataTable(data, filename, schInfoData, overallTotals) {
+        var resultDiv = $('<div class="table-container"></div>');
+        var html = '<h6>Table for ' + filename + '</h6>';
+        
+        html += '<div class="table-responsive">';
+        html += '<table class="table table-striped">';
+        html += '<thead class="thead-dark">';
         html += '<tr>';
-        html += '<td>' + formattedBValue + '</td>';
-        html += '<td style="text-align: center;">' + lValue + '</td>';
-        html += '<td style="text-align: center;">' + oValue + '</td>';
-        html += '<td style="text-align: center;">' + rValue + '</td>';
-        html += '<td style="text-align: center;">' + totalValue + '</td>';
+        html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
+        html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
+        html += '<th scope="col" style="text-align: center;">Male</th>';
+        html += '<th scope="col" style="text-align: center;">Female</th>';
+        html += '<th scope="col" style="text-align: center;">Total</th>';
         html += '</tr>';
-    });
+        html += '</thead>';
+        html += '<tbody>';
 
-    html += '</tbody>';
-    html += '</table>';
-    html += '</div>';
+        var totalL = 0;
+        var totalO = 0;
+        var totalR = 0;
 
-    // Display SchInfo data
-    html += '<p style="font-size: 14px; color: #006BDE; font-weight: 400; margin-bottom: 0px; Margin-top: 3px">School Head: ' + schInfoData.F39 + '</p>';
-    html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">Position: ' + schInfoData.AH23 + '</p>';
-    html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">School District: ' + schInfoData.F41 + '</p>';
+        data.forEach(function(row) {
+            var bValue = row[0];
+            var lValue = row[1];
+            var oValue = row[2];
+            var rValue = row[3];
 
-    html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p><br>';
+            var totalValue = parseFloat(oValue) + parseFloat(rValue);
 
-    tableContainer.html(html);
-    resultDiv.append(tableContainer);
+            totalL += parseFloat(lValue);
+            totalO += parseFloat(oValue);
+            totalR += parseFloat(rValue);
 
-    // Add <hr> to separate tables
-    resultDiv.append('<hr class="horizontal light mt-0 mb-2">');
-}
+            var bValues = bValue.split('\n');
+            var formattedBValue = bValues.join('<br>');
 
+            html += '<tr>';
+            html += '<td>' + formattedBValue + '</td>';
+            html += '<td style="text-align: center;">' + lValue + '</td>';
+            html += '<td style="text-align: center;">' + oValue + '</td>';
+            html += '<td style="text-align: center;">' + rValue + '</td>';
+            html += '<td style="text-align: center;">' + totalValue + '</td>';
+            html += '</tr>';
+        });
 
+        html += '</tbody>';
+        html += '</table>';
+        html += '</div>';
 
-function displayData2(data, totals, filename, schInfoData) {
-    var resultDiv = $('#result2');
+        html += '<p style="font-size: 14px; color: #006BDE; font-weight: 400; margin-bottom: 0px; Margin-top: 3px">School Head: ' + schInfoData.F39 + '</p>';
+        html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">Position: ' + schInfoData.AH23 + '</p>';
+        html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">School District: ' + schInfoData.F41 + '</p>';
+        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p><br>';
 
-    var tableContainer = $('<div class="table-container"></div>');
-    var html = '<h6>Table for ' + filename + '</h6>';
+        resultDiv.html(html);
+        resultDiv.append('<hr class="horizontal light mt-0 mb-2">');
 
-    // Display table
-    html += '<div class="table-responsive">';
-    html += '<table class="table table-striped">';
-    html += '<thead class="thead-dark">';
-    html += '<tr>';
-    html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
-    html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
-    html += '<th scope="col" style="text-align: center;">Male</th>';
-    html += '<th scope="col" style="text-align: center;">Female</th>';
-    html += '<th scope="col" style="text-align: center;">Total</th>';
-    html += '</tr>';
-    html += '</thead>';
-    html += '<tbody>';
+        overallTotals.totalL += totalL;
+        overallTotals.totalO += totalO;
+        overallTotals.totalR += totalR;
 
-    var totalL = 0;
-    var totalO = 0;
-    var totalR = 0;
+        return resultDiv;
+    }
 
-    data.forEach(function(row) {
-        var bValue = row[0];
-        var lValue = row[1];
-        var oValue = row[2];
-        var rValue = row[3];
-
-        var totalValue = parseFloat(oValue) + parseFloat(rValue);
-
-        totalL += parseFloat(lValue);
-        totalO += parseFloat(oValue);
-        totalR += parseFloat(rValue);
-
-        // Splitting the content of the first column and adding line breaks
-        var bValues = bValue.split('\n');
-        var formattedBValue = bValues.join('<br>');
-
+    function displayData2(data, filename, schInfoData, overallTotals) {
+        var resultDiv = $('<div class="table-container"></div>');
+        var html = '<h6>Table for ' + filename + '</h6>';
+        
+        html += '<div class="table-responsive">';
+        html += '<table class="table table-striped">';
+        html += '<thead class="thead-dark">';
         html += '<tr>';
-        html += '<td>' + formattedBValue + '</td>';
-        html += '<td style="text-align: center;">' + lValue + '</td>';
-        html += '<td style="text-align: center;">' + oValue + '</td>';
-        html += '<td style="text-align: center;">' + rValue + '</td>';
-        html += '<td style="text-align: center;">' + totalValue + '</td>';
+        html += '<th scope="col" style="max-width: 150px; text-align: center;">Position Title</th>';
+        html += '<th scope="col" style="text-align: center;">No. of positions <br> assigned <br> in school per <br> latest PSI-POP</th>';
+        html += '<th scope="col" style="text-align: center;">Male</th>';
+        html += '<th scope="col" style="text-align: center;">Female</th>';
+        html += '<th scope="col" style="text-align: center;">Total</th>';
         html += '</tr>';
-    });
+        html += '</thead>';
+        html += '<tbody>';
 
-    html += '</tbody>';
-    html += '</table>';
-    html += '</div>';
+        var totalL = 0;
+        var totalO = 0;
+        var totalR = 0;
 
-    html += '<p style="font-size: 14px; color: #006BDE; font-weight: 400; margin-bottom: 0px; Margin-top: 3px">School Head: ' + schInfoData.F39 + '</p>';
-    html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">Position: ' + schInfoData.AH23 + '</p>';
-    html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">School District: ' + schInfoData.F41 + '</p>';
-    html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p><br>';
-  
-    
-    tableContainer.html(html);
-   
-    resultDiv.append(tableContainer);
-}
+        data.forEach(function(row) {
+            var bValue = row[0];
+            var lValue = row[1];
+            var oValue = row[2];
+            var rValue = row[3];
 
+            var totalValue = parseFloat(oValue) + parseFloat(rValue);
 
-    function updateOverallTotals(totals, overallTotals) {
-        overallTotals.totalL += totals.totalL;
-        overallTotals.totalO += totals.totalO;
-        overallTotals.totalR += totals.totalR;
+            totalL += parseFloat(lValue);
+            totalO += parseFloat(oValue);
+            totalR += parseFloat(rValue);
+
+            var bValues = bValue.split('\n');
+            var formattedBValue = bValues.join('<br>');
+
+            html += '<tr>';
+            html += '<td>' + formattedBValue + '</td>';
+            html += '<td style="text-align: center;">' + lValue + '</td>';
+            html += '<td style="text-align: center;">' + oValue + '</td>';
+            html += '<td style="text-align: center;">' + rValue + '</td>';
+            html += '<td style="text-align: center;">' + totalValue + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody>';
+        html += '</table>';
+        html += '</div>';
+
+        html += '<p style="font-size: 14px; color: #006BDE; font-weight: 400; margin-bottom: 0px; Margin-top: 3px">School Head: ' + schInfoData.F39 + '</p>';
+        html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">Position: ' + schInfoData.AH23 + '</p>';
+        html += '<p style="font-size: 14px; color:  #006BDE; font-weight: 400; margin-bottom: 0px">School District: ' + schInfoData.F41 + '</p>';
+        html += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + totalL + ', Total Male: ' + totalO + ', Total Female: ' + totalR + '</p><br>';
+
+        resultDiv.html(html);
+        resultDiv.append('<hr class="horizontal light mt-0 mb-2">');
+
+        overallTotals.totalL += totalL;
+        overallTotals.totalO += totalO;
+        overallTotals.totalR += totalR;
+
+        return resultDiv;
     }
 
     function displayOverallTotals(overallTotalsTable10, overallTotalsTable11) {
@@ -759,8 +714,19 @@ function displayData2(data, totals, filename, schInfoData) {
         html2 += '<p style="font-size: 14px; color: black; font-weight: 700">Total PSI-POP: ' + overallTotalsTable11.totalL + ', Total Male: ' + overallTotalsTable11.totalO + ', Total Female: ' + overallTotalsTable11.totalR + '</p>';
         overallTotalsDiv2.html(html2);
     }
-</script>
+    
 
+
+
+
+
+
+
+
+
+
+
+</script>
 
 
 </body>
